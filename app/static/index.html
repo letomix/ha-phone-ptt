@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walkie-Talkie PTT</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #111; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: height; height: 100vh; margin: 0; }
+        .container { text-align: center; width: 90%; max-width: 400px; padding: 20px; background: #222; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        select { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; background: #333; color: #fff; border: 1px solid #444; font-size: 16px; }
+        #pttButton { width: 150px; height: 150px; border-radius: 50%; background: #e74c3c; color: white; border: none; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4); transition: 0.2s; outline: none; }
+        #pttButton:active, #pttButton.recording { background: #c0392b; transform: scale(0.95); box-shadow: 0 2px 10px rgba(192, 57, 43, 0.6); }
+        #status { margin-top: 15px; font-size: 14px; color: #aaa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Walkie-Talkie PTT</h2>
+        <select id="playerSelect">
+            <option value="">A carregar colunas...</option>
+        </select>
+        <button id="pttButton">PRESSIONE<br>PARA FALAR</button>
+        <div id="status">Pronto</div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        async function loadPlayers() {
+            try {
+                let res = await fetch('/api/media_players');
+                let data = await res.json();
+                let select = document.getElementById('playerSelect');
+                select.innerHTML = '';
+                if(data.players.length === 0) {
+                    select.innerHTML = '<option value="">Nenhuma coluna encontrada</option>';
+                    return;
+                }
+                data.players.forEach(p => {
+                    let opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = p;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error("Erro ao carregar players", e);
+            }
+        }
+
+        loadPlayers();
+
+        const btn = document.getElementById('pttButton');
+        const status = document.getElementById('status');
+
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                status.textContent = "A transmitir áudio...";
+                let audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                audioChunks = [];
+                
+                let formData = new FormData();
+                formData.append("file", audioBlob, "ptt_message.webm");
+                formData.append("target_player", document.getElementById('playerSelect').value);
+
+                try {
+                    let res = await fetch('/api/upload_audio', { method: 'POST', body: formData });
+                    let result = await res.json();
+                    status.textContent = result.message || "Transmitido!";
+                } catch (e) {
+                    status.textContent = "Erro na transmissão.";
+                }
+            };
+        }).catch(e => {
+            status.textContent = "Erro: Sem acesso ao microfone!";
+        });
+
+        btn.addEventListener('mousedown', startRecording);
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
+
+        btn.addEventListener('mouseup', stopRecording);
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+
+        function startRecording() {
+            if (!mediaRecorder || mediaRecorder.state === "recording") return;
+            audioChunks = [];
+            mediaRecorder.start();
+            btn.classList.add('recording');
+            status.textContent = "A gravar... Solte para enviar.";
+        }
+
+        function stopRecording() {
+            if (!mediaRecorder || mediaRecorder.state !== "recording") return;
+            mediaRecorder.stop();
+            btn.classList.remove('recording');
+        }
+    </script>
+</body>
+</html>
