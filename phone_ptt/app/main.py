@@ -75,70 +75,72 @@ HTML_CONTENT = """
             <option value="media_player.tv_do_salao">TV Salão</option>
         </select>
         
-        <button id="ptt-btn">GRAVAR</button>
-        <div id="status">Toque e mantenha para falar</div>
+        <!-- Botão com eventos integrados diretamente para garantir resposta imediata -->
+        <button id="ptt-btn" 
+                onmousedown="startRecording(event)" 
+                onmouseup="stopRecording(event)" 
+                ontouchstart="startRecording(event)" 
+                ontouchend="stopRecording(event)">GRAVAR</button>
+        <div id="status">Sistema pronto. Toque para falar</div>
     </div>
 
     <script>
-        const btn = document.getElementById('ptt-btn');
         const status = document.getElementById('status');
         const playerSelect = document.getElementById('ptt-player');
-        let mediaRecorder;
+        let mediaRecorder = null;
         let audioChunks = [];
-
-        async function initMic() {
-            try {
-                status.innerText = "A pedir acesso ao microfone...";
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error("API de microfone não suportada pelo browser.");
-                }
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                
-                mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
-                };
-
-                mediaRecorder.onstop = async () => {
-                    status.innerText = "A enviar áudio...";
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    audioChunks = [];
-
-                    const formData = new FormData();
-                    formData.append('audio', audioBlob, 'ptt.webm');
-                    formData.append('player', playerSelect.value);
-
-                    try {
-                        const response = await fetch('/speak', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        const result = await response.json();
-                        if (result.success) {
-                            status.innerText = "Áudio enviado com sucesso!";
-                        } else {
-                            status.innerText = "Erro no servidor.";
-                        }
-                    } catch (err) {
-                        status.innerText = "Erro de rede ao enviar.";
-                    }
-                };
-                status.innerText = "Pronto! Puxe/Mantenha premido para falar.";
-            } catch (e) {
-                console.error(e);
-                status.innerText = "Erro: Permissão negada ou HTTPS necessário.";
-            }
-        }
 
         async function startRecording(e) {
             e.preventDefault();
-            if (!mediaRecorder) {
-                await initMic();
-            }
-            if (mediaRecorder && mediaRecorder.state === 'inactive') {
-                audioChunks = [];
-                mediaRecorder.start();
-                status.innerText = "A gravar... Fale agora.";
+            status.innerText = "A iniciar gravação...";
+
+            try {
+                if (!mediaRecorder) {
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        status.innerText = "Erro: Microfone não suportado.";
+                        return;
+                    }
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        status.innerText = "A enviar áudio...";
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        audioChunks = [];
+
+                        const formData = new FormData();
+                        formData.append('audio', audioBlob, 'ptt.webm');
+                        formData.append('player', playerSelect.value);
+
+                        try {
+                            const response = await fetch('/speak', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                status.innerText = "Áudio enviado com sucesso!";
+                            } else {
+                                status.innerText = "Erro no servidor.";
+                            }
+                        } catch (err) {
+                            status.innerText = "Erro de rede ao enviar.";
+                        }
+                    };
+                }
+
+                if (mediaRecorder.state === 'inactive') {
+                    audioChunks = [];
+                    mediaRecorder.start();
+                    status.innerText = "A gravar... Fale agora!";
+                }
+            } catch (err) {
+                console.error(err);
+                status.innerText = "Erro: Permissão de microfone negada.";
             }
         }
 
@@ -148,12 +150,6 @@ HTML_CONTENT = """
                 mediaRecorder.stop();
             }
         }
-
-        // Eventos unificados de rato e toque
-        btn.addEventListener('mousedown', startRecording);
-        btn.addEventListener('mouseup', stopRecording);
-        btn.addEventListener('touchstart', startRecording, { passive: false });
-        btn.addEventListener('touchend', stopRecording, { passive: false });
     </script>
 </body>
 </html>
