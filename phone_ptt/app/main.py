@@ -25,7 +25,7 @@ async def get_index():
         return f.read()
 
 @app.post("/api/speak")
-async def speak(audio: UploadFile = File(...), player: Form(...)):
+async def speak(player: Form(...), audio: UploadFile = File(...)):
     file_path = os.path.join(AUDIO_DIR, "message.webm")
     
     with open(file_path, "wb") as buffer:
