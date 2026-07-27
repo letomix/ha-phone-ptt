@@ -12,11 +12,10 @@ RUN \
 # Definir o diretório de trabalho
 WORKDIR /app
 
-# Criar um ambiente virtual e instalar dependências nele
+# Criar ambiente virtual e instalar dependências
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copiar e instalar dependências do Python no ambiente virtual
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
@@ -25,5 +24,5 @@ COPY app/ /app/
 COPY run.sh /
 RUN chmod +x /run.sh
 
-# Definir o comando de arranque
+# Correção crucial para o s6-overlay do Home Assistant
 CMD [ "/run.sh" ]
