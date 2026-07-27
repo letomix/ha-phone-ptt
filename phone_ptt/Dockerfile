@@ -9,15 +9,15 @@ RUN apk add --no-cache \
 # Definir o diretório de trabalho
 WORKDIR /app
 
-# Instalar o FastAPI e Uvicorn diretamente (ou via requirements.txt se preferir)
+# Instalar pacotes necessários do Python diretamente
 RUN pip3 install --no-cache-dir --break-system-packages fastapi uvicorn
 
-# Copiar o script principal para a raiz do diretório de trabalho
+# Copiar o script principal para o container
 COPY main.py /app/main.py
 
-# Criar a pasta static exigida pelo FastAPI para evitar erros em runtime
+# Criar a pasta static por precaução
 RUN mkdir -p /app/static
 
-# O Python torna-se imediatamente o PID 1 absoluto
+# Executar a aplicação Python diretamente como PID 1
 ENTRYPOINT ["python3"]
 CMD ["/app/main.py"]
