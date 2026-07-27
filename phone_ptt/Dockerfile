@@ -22,5 +22,8 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 # Copiar os ficheiros da aplicação
 COPY app/ /app/
 
-# Executar o Python diretamente como CMD principal (evita o s6-overlay-suexec)
-CMD ["python3", "/app/main.py"]
+# Copiar a arquitetura de arranque do s6-overlay para o sistema do container
+COPY rootfs /
+
+# Deixar o CMD vazio ou sem diretivas complexas, pois o s6-overlay gere o ciclo de vida nativamente através do rootfs
+CMD ["/init"]
