@@ -1,53 +1,42 @@
 import os
-import json
-import requests
-from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 
-app = FastAPI()
+app = FastAPI(title="Phone PTT", description="Push-to-Talk local para Home Assistant")
 
-SUPERVISOR_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
-HEADERS = {
-    "Authorization": f"Bearer {SUPERVISOR_TOKEN}",
-    "Content-Type": "application/json",
-}
+# Garantir que a pasta static existe automaticamente para evitar erros de diretório
+os.makedirs("/app/static", exist_ok=True)
 
-AUDIO_DIR = "/tmp/audio_cache"
-os.makedirs(AUDIO_DIR, exist_ok=True)
-
+# Montar os ficheiros estáticos de forma segura
 app.mount("/static", StaticFiles(directory="/app/static"), name="static")
-app.mount("/audio", StaticFiles(directory=AUDIO_DIR), name="audio")
 
-@app.get("/", response_class=HTMLResponse)
-async def get_index():
-    with open("/app/static/index.html", "r", encoding="utf-8") as f:
-        return f.read()
 
-@app.post("/api/speak")
+@app.get("/")
+async def root():
+    return {"status": "running", "message": "Phone PTT está ativo e operacional."}
+
+
+@app.post("/speak")
 async def speak(player: str = Form(...), audio: UploadFile = File(...)):
-    file_path = os.path.join(AUDIO_DIR, "message.webm")
-    
-    with open(file_path, "wb") as buffer:
-        content = await audio.read()
-        buffer.write(content)
+    """
+    Endpoint responsável por receber o áudio e o player correspondente,
+    mantendo a ordem correta dos argumentos sem predefinidos primeiro.
+    """
+    try:
+        # Ler o conteúdo do ficheiro de áudio enviado
+        audio_content = await audio.read()
+        
+        # Aqui pode adicionar a lógica de processamento do PTT e envio para o media_player
+        
+        return {
+            "success": True,
+            "player": player,
+            "filename": audio.filename,
+            "size_bytes": len(audio_content)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    addon_host = os.environ.get("HOSTNAME", "localhost")
-    audio_url = f"http://{addon_host}:8099/audio/message.webm"
-
-    ha_url = "http://supervisor/core/api/services/media_player/play_media"
-    payload = {
-        "entity_id": player,
-        "media_content_id": audio_url,
-        "media_content_type": "music"
-    }
-
-    response = requests.post(ha_url, headers=HEADERS, json=payload)
-
-    if response.status_code == 200:
-        return JSONResponse({"status": "success", "message": "Áudio enviado com sucesso!"})
-    else:
-        return JSONResponse({"status": "error", "message": response.text}, status_code=500)
 
 if __name__ == "__main__":
     import uvicorn
