@@ -6,12 +6,17 @@ RUN \
     apk add --no-cache \
         python3 \
         py3-pip \
+        py3-virtualenv \
         bash
 
 # Definir o diretório de trabalho
 WORKDIR /app
 
-# Copiar e instalar dependências do Python
+# Criar um ambiente virtual e instalar dependências nele
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copiar e instalar dependências do Python no ambiente virtual
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
