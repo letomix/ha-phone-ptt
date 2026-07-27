@@ -24,5 +24,4 @@ COPY app/ /app/
 COPY run.sh /
 RUN chmod +x /run.sh
 
-# Correção crucial para o s6-overlay do Home Assistant
 CMD [ "/run.sh" ]
