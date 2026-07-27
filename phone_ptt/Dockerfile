@@ -21,7 +21,6 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Copiar os ficheiros da aplicação
 COPY app/ /app/
-COPY run.sh /
-RUN chmod +x /run.sh
 
-CMD [ "/run.sh" ]
+# Executar o Python diretamente como CMD principal (evita o s6-overlay-suexec)
+CMD ["python3", "/app/main.py"]
