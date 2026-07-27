@@ -1,3 +1,5 @@
 #!/usr/bin/with-contenv bash
+set -e
+
 echo "A iniciar o Phone Push-to-Talk..."
-exec /opt/venv/bin/python3 /app/main.py
+exec python3 /app/main.py
