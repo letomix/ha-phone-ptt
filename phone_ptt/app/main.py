@@ -5,7 +5,6 @@ import os
 
 app = FastAPI()
 
-# HTML da interface otimizado para toque no telemóvel e PC
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="pt">
@@ -47,7 +46,7 @@ HTML_CONTENT = """
             width: 200px;
             height: 200px;
             border-radius: 50%;
-            background: linear-gradient(145deg, #03a9f4, #0288d1);
+            background: #03a9f4;
             color: white;
             font-size: 20px;
             font-weight: bold;
@@ -55,14 +54,8 @@ HTML_CONTENT = """
             box-shadow: 0 8px 20px rgba(3, 169, 244, 0.4);
             cursor: pointer;
             outline: none;
-            transition: transform 0.1s, background 0.2s;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
-        }
-        #ptt-btn:active, #ptt-btn.recording {
-            background: linear-gradient(145deg, #e53935, #c62828);
-            transform: scale(0.95);
-            box-shadow: 0 4px 10px rgba(229, 57, 53, 0.5);
         }
         #status {
             margin-top: 25px;
@@ -135,7 +128,6 @@ HTML_CONTENT = """
             }
         }
 
-        // Eventos para Telemóvel (Touch) e PC (Mouse)
         async function startRecording(e) {
             e.preventDefault();
             if (!mediaRecorder) {
@@ -144,7 +136,6 @@ HTML_CONTENT = """
             if (mediaRecorder && mediaRecorder.state === 'inactive') {
                 audioChunks = [];
                 mediaRecorder.start();
-                btn.classList.add('recording');
                 status.innerText = "A gravar... Fale agora.";
             }
         }
@@ -153,15 +144,11 @@ HTML_CONTENT = """
             e.preventDefault();
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
-                btn.classList.remove('recording');
             }
         }
 
-        // Suporte a Rato
         btn.addEventListener('mousedown', startRecording);
         btn.addEventListener('mouseup', stopRecording);
-
-        // Suporte a Ecrã Tátil (Telemóveis / Tablets / App HA)
         btn.addEventListener('touchstart', startRecording, { passive: false });
         btn.addEventListener('touchend', stopRecording, { passive: false });
     </script>
@@ -175,12 +162,8 @@ async def index():
 
 @app.post("/speak")
 async def speak(audio: UploadFile = File(...), player: str = Form(...)):
-    # Aqui o FastAPI recebe o ficheiro de áudio gravado do telemóvel
-    # Numa fase seguinte, podemos encaminhar este ficheiro para o Home Assistant via API interna.
     contents = await audio.read()
     print(f"Recebidos {len(contents)} bytes de áudio para o leitor: {player}")
-    
-    # Por agora, devolvemos sucesso para testar o fluxo completo na App
     return {"success": True}
 
 if __name__ == "__main__":
