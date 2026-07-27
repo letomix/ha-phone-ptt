@@ -1,0 +1,22 @@
+name: "Phone Push-to-Talk"
+version: "1.0.0"
+slug: "phone_ptt"
+description: "Transforma o telemóvel num Walkie-Talkie para transmitir voz diretamente para colunas inteligentes e TVs do Home Assistant."
+url: "https://github.com/letomix/ha-phone-ptt/"
+startup: application
+boot: auto
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+ports:
+  8099/tcp: 8099
+map:
+  - config:ro
+homeassistant_api: true
+options:
+  default_player: "media_player.salao"
+schema:
+  default_player: string
