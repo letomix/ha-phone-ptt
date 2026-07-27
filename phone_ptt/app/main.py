@@ -88,8 +88,9 @@ HTML_CONTENT = """
 
         async function initMic() {
             try {
+                status.innerText = "A pedir acesso ao microfone...";
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error("API de microfone não suportada.");
+                    throw new Error("API de microfone não suportada pelo browser.");
                 }
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
@@ -99,7 +100,7 @@ HTML_CONTENT = """
                 };
 
                 mediaRecorder.onstop = async () => {
-                    status.innerText = "A transmitir áudio...";
+                    status.innerText = "A enviar áudio...";
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     audioChunks = [];
 
@@ -114,17 +115,18 @@ HTML_CONTENT = """
                         });
                         const result = await response.json();
                         if (result.success) {
-                            status.innerText = "Transmissão efetuada!";
+                            status.innerText = "Áudio enviado com sucesso!";
                         } else {
-                            status.innerText = "Erro ao reproduzir no leitor.";
+                            status.innerText = "Erro no servidor.";
                         }
                     } catch (err) {
-                        status.innerText = "Erro de ligação ao servidor.";
+                        status.innerText = "Erro de rede ao enviar.";
                     }
                 };
-                status.innerText = "Pronto! Mantenha premido para falar.";
+                status.innerText = "Pronto! Puxe/Mantenha premido para falar.";
             } catch (e) {
-                status.innerText = "Erro: Conceda permissão de microfone.";
+                console.error(e);
+                status.innerText = "Erro: Permissão negada ou HTTPS necessário.";
             }
         }
 
@@ -147,6 +149,7 @@ HTML_CONTENT = """
             }
         }
 
+        // Eventos unificados de rato e toque
         btn.addEventListener('mousedown', startRecording);
         btn.addEventListener('mouseup', stopRecording);
         btn.addEventListener('touchstart', startRecording, { passive: false });
@@ -163,7 +166,7 @@ async def index():
 @app.post("/speak")
 async def speak(audio: UploadFile = File(...), player: str = Form(...)):
     contents = await audio.read()
-    print(f"Recebidos {len(contents)} bytes de áudio para o leitor: {player}")
+    print(f"Áudio recebido com sucesso! Tamanho: {len(contents)} bytes para o leitor: {player}")
     return {"success": True}
 
 if __name__ == "__main__":
