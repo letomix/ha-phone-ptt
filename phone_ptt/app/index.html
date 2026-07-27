@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walkie-Talkie Home Assistant</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            text-align: center; 
+            padding: 40px; 
+            background: #111; 
+            color: #fff; 
+        }
+        select { 
+            padding: 12px; 
+            font-size: 16px; 
+            margin-bottom: 40px; 
+            border-radius: 8px; 
+            background: #222; 
+            color: #fff; 
+            border: 1px solid #444; 
+            width: 80%;
+            max-width: 300px;
+        }
+        #pttBtn { 
+            width: 200px; 
+            height: 200px; 
+            border-radius: 50%; 
+            font-size: 20px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            border: none; 
+            background: #2196F3; 
+            color: white; 
+            box-shadow: 0px 8px 20px rgba(33, 150, 243, 0.4); 
+            transition: transform 0.1s, background 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #pttBtn.recording { 
+            background: #f44336; 
+            transform: scale(0.95);
+            box-shadow: 0px 4px 10px rgba(244, 67, 54, 0.6);
+        }
+        #status { margin-top: 20px; font-size: 14px; color: #aaa; }
+    </style>
+</head>
+<body>
+    <h1>Walkie-Talkie HA</h1>
+    
+    <div>
+        <select id="player">
+            <option value="media_player.salao">Salão (Google Cast)</option>
+            <option value="media_player.tv_sala">TV Sala</option>
+            <option value="media_player.quarto">Quarto</option>
+        </select>
+    </div>
+
+    <div>
+        <button id="pttBtn">PREMIR PARA FALAR</button>
+    </div>
+    
+    <div id="status">Pronto</div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        const btn = document.getElementById('pttBtn');
+        const statusDiv = document.getElementById('status');
+
+        async function initMic() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    statusDiv.textContent = "A enviar áudio...";
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    audioChunks = [];
+
+                    const formData = new FormData();
+                    formData.append("audio", audioBlob, "voice.webm");
+                    formData.append("player", document.getElementById('player').value);
+
+                    try {
+                        const response = await fetch('/api/speak', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
+                        statusDiv.textContent = result.status === 'success' ? 'Transmitido com sucesso!' : 'Erro ao transmitir.';
+                    } catch (err) {
+                        statusDiv.textContent = 'Erro de rede ao enviar.';
+                    }
+                };
+            } catch (err) {
+                alert("Permissão de microfone negada ou indisponível: " + err);
+            }
+        }
+
+        initMic();
+
+        function startRecording(e) {
+            e.preventDefault();
+            if (mediaRecorder && mediaRecorder.state === "inactive") {
+                audioChunks = [];
+                mediaRecorder.start();
+                btn.classList.add('recording');
+                btn.textContent = "A OUVIR...";
+                statusDiv.textContent = "A gravar voz...";
+            }
+        }
+
+        function stopRecording(e) {
+            e.preventDefault();
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+                btn.classList.remove('recording');
+                btn.textContent = "PREMIR PARA FALAR";
+            }
+        }
+
+        btn.addEventListener('mousedown', startRecording);
+        btn.addEventListener('mouseup', stopRecording);
+        btn.addEventListener('touchstart', startRecording);
+        btn.addEventListener('touchend', stopRecording);
+    </script>
+</body>
+</html>
